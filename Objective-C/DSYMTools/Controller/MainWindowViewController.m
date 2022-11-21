@@ -380,25 +380,20 @@
     }
     NSString *result = @"";
     NSString *slidValueStr = self.defaultSlideAddressLabel.stringValue;
-    if (slidValueStr.length > 0) {
-        if (![slidValueStr hasPrefix:@"0x"] && ![slidValueStr hasPrefix:@"0X"]) {
-            NSString *memoryAddressToTen = [self sixtyToTen:self.errorMemoryAddressLabel.stringValue];
-            NSInteger memoryAddressTenInt = memoryAddressToTen.integerValue;
-            
-            NSInteger slideAddressTenInt = memoryAddressTenInt - slidValueStr.integerValue;
-            NSString *slideAddressSixTyStr = [self tenToSixTy:slideAddressTenInt];
-            
-            NSString *commandString = [NSString stringWithFormat:@"xcrun atos -arch %@ -o \"%@\" -l %@ %@", self.selectedUUIDInfo.arch, self.selectedUUIDInfo.executableFilePath, slideAddressSixTyStr, self.errorMemoryAddressLabel.stringValue];
-            result = [self runCommand:commandString];
-            
-        }else{
-            NSString *memoryAddressToTen = [self sixtyToTen:self.errorMemoryAddressLabel.stringValue];
-            NSInteger memoryAddressTenInt = memoryAddressToTen.integerValue + self.errorTextField.stringValue.integerValue;
-            NSString *slideAddressSixTyStr = [self tenToSixTy:memoryAddressTenInt];
-            
-            NSString *commandString = [NSString stringWithFormat:@"xcrun atos -arch %@ -o \"%@\" -l %@ %@", self.selectedUUIDInfo.arch, self.selectedUUIDInfo.executableFilePath, self.defaultSlideAddressLabel.stringValue, slideAddressSixTyStr];
-            result = [self runCommand:commandString];
-        }
+    if (slidValueStr.length > 0 && [slidValueStr containsString:@"-"]) {
+        //  load_address（起始地址） =    stack_address（偏移地址）  -   symbol_address（偏移量）
+        //                              0x00000001000b4c04-35844
+        NSString *stack_address = [slidValueStr componentsSeparatedByString:@"-"][0];
+        NSString *symbol_address = [slidValueStr componentsSeparatedByString:@"-"][1];
+        long long int loadAdressInt = [self sixtyToTen:stack_address].longLongValue - symbol_address.longLongValue;
+        NSString *loadAdress = [NSString stringWithFormat:@"0x%@",[self tenToSixTy:loadAdressInt]];
+        self.errorTextField.stringValue = loadAdress;
+        
+        NSString *firstAdress = self.errorMemoryAddressLabel.stringValue;
+       
+        NSString *commandString = [NSString stringWithFormat:@"xcrun atos -arch %@ -o \"%@\" -l %@ %@", self.selectedUUIDInfo.arch, self.selectedUUIDInfo.executableFilePath, loadAdress, firstAdress];
+        NSLog(@"commandString: %@", commandString);
+        result = [self runCommand:commandString];
     }
     [self.errorMessageView setString:result];
 }
